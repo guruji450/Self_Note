@@ -1,11 +1,14 @@
+// script.js (Modified for Modular Imports - type="module" in index.html)
+
+// No need to initialize Firebase or Firestore here anymore!
+// It's already initialized in index.html in the <script type="module"> block.
+// You can directly access 'db' which was initialized there.
+
 document.addEventListener('DOMContentLoaded', () => {
     const thoughtDateInput = document.getElementById('thoughtDate');
     const thoughtTextInput = document.getElementById('thoughtText');
     const addThoughtBtn = document.getElementById('addThoughtBtn');
     const thoughtsGrid = document.getElementById('thoughts-grid');
-
-    // Initialize Firebase Firestore (already done in index.html <script> section)
-    const db = firebase.firestore();
 
     // Function to create a thought element (same as before)
     function createThoughtElement(date, text) {
@@ -17,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         return thoughtDiv;
     }
-
 
     // Function to add a new thought to Firestore
     function addThought(date, text) {
