@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const addThoughtBtn = document.getElementById('addThoughtBtn');
     const thoughtsGrid = document.getElementById('thoughts-grid');
 
+    // Initialize Firebase Firestore (already done in index.html <script> section)
+    const db = firebase.firestore();
+
     // Function to create a thought element (same as before)
     function createThoughtElement(date, text) {
         const thoughtDiv = document.createElement('div');
@@ -15,27 +18,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return thoughtDiv;
     }
 
-    // Function to save thoughts to local storage
-    function saveThoughts(thoughts) {
-        localStorage.setItem('myThoughts', JSON.stringify(thoughts)); // Store as JSON string
-    }
 
-    // Function to get thoughts from local storage
-    function getThoughts() {
-        const storedThoughts = localStorage.getItem('myThoughts');
-        return storedThoughts ? JSON.parse(storedThoughts) : []; // Parse JSON or return empty array
-    }
-
-    // Function to add a new thought (modified to include local storage)
+    // Function to add a new thought to Firestore
     function addThought(date, text) {
         if (date && text) {
             const thoughtElement = createThoughtElement(date, text);
             thoughtsGrid.prepend(thoughtElement);
 
-            // Get existing thoughts, add new one, and save
-            const currentThoughts = getThoughts();
-            currentThoughts.unshift({ date: date, text: text }); // Add new thought to the beginning of array
-            saveThoughts(currentThoughts);
+            // **Save to Firestore**
+            db.collection("thoughts") // Collection name in Firestore (like a table)
+              .add({ // Add a new document to the 'thoughts' collection
+                  date: date,
+                  text: text,
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp() // Optional: Add a timestamp
+              })
+              .then((docRef) => { // 'docRef' is the document reference of the added thought
+                  console.log("Document written with ID: ", docRef.id);
+              })
+              .catch((error) => {
+                  console.error("Error adding document: ", error);
+                  alert("Error saving thought."); // Handle error more gracefully
+              });
+
 
             // Clear input fields
             thoughtDateInput.value = '';
@@ -57,15 +61,33 @@ document.addEventListener('DOMContentLoaded', () => {
         addThought(dateValue, textValue);
     });
 
-    // Load thoughts from local storage on page load
-    const initialThoughts = getThoughts(); // Get thoughts from local storage
+    // Load thoughts from Firestore on page load
+    function loadThoughtsFromFirestore() {
+        db.collection("thoughts") // Query the 'thoughts' collection
+          .orderBy("timestamp", "desc") // Order by timestamp, newest first (optional, if you added timestamp)
+          .get() // Get all documents in the collection
+          .then((querySnapshot) => { // 'querySnapshot' contains all the retrieved documents
+              const initialThoughts = [];
+              querySnapshot.forEach((doc) => { // Loop through each document
+                  // doc.data() is the data in each document
+                  initialThoughts.push(doc.data());
+              });
 
-    // Display loaded thoughts and animate them on load (modified to use loaded thoughts)
-    initialThoughts.forEach((thoughtData, index) => {
-        const thoughtElement = createThoughtElement(thoughtData.date, thoughtData.text);
-        thoughtsGrid.appendChild(thoughtElement);
-        setTimeout(() => {
-            thoughtElement.classList.add('show');
-        }, 100 * index);
-    });
+              // Display loaded thoughts (same as before, but using Firestore data)
+              initialThoughts.forEach((thoughtData, index) => {
+                  const thoughtElement = createThoughtElement(thoughtData.date, thoughtData.text);
+                  thoughtsGrid.appendChild(thoughtElement);
+                  setTimeout(() => {
+                      thoughtElement.classList.add('show');
+                  }, 100 * index);
+              });
+          })
+          .catch((error) => {
+              console.error("Error getting documents: ", error);
+              alert("Error loading thoughts."); // Handle error more gracefully
+          });
+    }
+
+    loadThoughtsFromFirestore(); // Call the function to load thoughts when page loads
+
 });
